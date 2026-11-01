@@ -23,14 +23,22 @@ La démonstration suit cette question :
 
 ## Pré-requis et démarrage
 
-Cette procédure a été exécutée avec `uv`, Podman rootless et `podman-compose` lancé via `uvx`. Le compose du dépôt démarre Elasticsearch, restaure son snapshot, puis lance les trois briques et l’agrégat. Sur un premier clone, créez `.env` à partir de `.env.example` avant de lancer Compose ; ne remplacez pas un `.env` déjà présent. Le dépôt du gateway doit être disponible dans un checkout voisin nommé `../mcpgateway`, avec les changements P5/P6 qui ajoutent les trois briques et `send_feedback`.
-
-Depuis la racine de `McpDiffusion` :
+Procédure validée avec `uv`, Podman rootless et `podman-compose` lancé via `uvx`, depuis deux clones propres. Depuis un répertoire parent vide, reproduisez les révisions testées :
 
 ```bash
+git clone --branch rework/settle-mcp-layer --single-branch https://github.com/Mirlon382/McpDiffusion.git McpDiffusion
+git clone --branch main --single-branch https://github.com/Mirlon382/mcpgateway.git mcpgateway
+git -C McpDiffusion checkout 3c7c92b25ce684e5fba5083f5c4f76ce1dc9909f
+git -C mcpgateway checkout 3b5c265be18a9a30e1795e3d0c62e0d1b3513cc7
+cd McpDiffusion
+cp .env.example .env
 uv sync
-uvx --from podman-compose podman-compose -p p8demo up --build \
-  elasticsearch es-restore insee-mcp melodi-mcp rmes-mcp mcpdiffusion
+```
+
+Dans un clone neuf, `cp .env.example .env` crée le fichier ; si `.env` existe déjà et contient une configuration, conservez-le au lieu de le remplacer. Depuis la racine de `McpDiffusion`, démarrez Elasticsearch, restaurez son snapshot, puis lancez les trois briques et l’agrégat :
+
+```bash
+uvx --from podman-compose podman-compose -p p8demo up --build elasticsearch es-restore insee-mcp melodi-mcp rmes-mcp mcpdiffusion
 ```
 
 Les endpoints sont `http://127.0.0.1:8001/mcp` (insee.fr), `:8002/mcp` (MELODI), `:8003/mcp` (RMES) et `:8000/mcp` (agrégat). Attendez que les routes `/health` de ces quatre ports répondent avec `"status":"ready"`.
@@ -79,21 +87,31 @@ Les résultats complets restent ceux de la vraie réponse : le script tronque se
 
 ### Prouver que chaque brique est autonome
 
-Laissez Elasticsearch en marche, arrêtez l’agrégat, le gateway et les deux autres processus de brique, puis lancez une seule brique à la fois. Ces appels directs ont été exécutés avec les deux autres processus de brique arrêtés ; chacun a répondu avec son propre backend déclaré `ready` :
+Arrêtez le gateway dans son terminal (`Ctrl-C`), gardez Elasticsearch en marche, puis testez une brique à la fois. Chaque appel direct ci-dessous a réussi depuis les clones propres, gateway et agrégat arrêtés, avec les deux autres processus de brique arrêtés :
 
 ```bash
+uvx --from podman-compose podman-compose -p p8demo stop mcpdiffusion melodi-mcp rmes-mcp
+uvx --from podman-compose podman-compose -p p8demo start insee-mcp
 uv run fastmcp call http://127.0.0.1:8001/mcp get_insee_homepage --json
+uvx --from podman-compose podman-compose -p p8demo stop insee-mcp
+uvx --from podman-compose podman-compose -p p8demo start melodi-mcp
 uv run fastmcp call http://127.0.0.1:8002/mcp search_melodi_datasets query='indice des prix a la consommation' number_of_datasets=1 --json
+uvx --from podman-compose podman-compose -p p8demo stop melodi-mcp
+uvx --from podman-compose podman-compose -p p8demo start rmes-mcp
 uv run fastmcp call http://127.0.0.1:8003/mcp search_rmes_graphs graph_uri_substring=produits --json
 ```
+
+Après chaque `start`, attendez que le `/health` de la brique retourne `"status":"ready"` avant l’appel client.
 
 insee.fr et MELODI ont besoin d’Elasticsearch pour leurs outils de recherche ; leur outil `get_insee_homepage` ne le nécessite pas. RMES ne dépend que du endpoint SPARQL public.
 
 ### Prouver que l’agrégat n’a pas besoin des serveurs HTTP des briques
 
-Arrêtez les trois services de brique, laissez uniquement Elasticsearch et l’agrégat, puis appelez les mêmes outils sur le port 8000 :
+Gateway arrêté, laissez Elasticsearch et l’agrégat tourner, puis arrêtez les trois conteneurs autonomes. Les deux appels ont réussi avec ces conteneurs et le gateway arrêtés :
 
 ```bash
+uvx --from podman-compose podman-compose -p p8demo stop insee-mcp melodi-mcp rmes-mcp
+uvx --from podman-compose podman-compose -p p8demo start mcpdiffusion
 uv run fastmcp call http://127.0.0.1:8000/mcp get_insee_homepage --json
 uv run fastmcp call http://127.0.0.1:8000/mcp search_rmes_graphs graph_uri_substring=produits --json
 ```
@@ -101,6 +119,22 @@ uv run fastmcp call http://127.0.0.1:8000/mcp search_rmes_graphs graph_uri_subst
 Les deux appels ont réussi avec les conteneurs `insee-mcp`, `melodi-mcp` et `rmes-mcp` arrêtés. L’agrégat monte les applications des briques dans son propre processus ; il ne relaie pas vers leurs ports HTTP.
 
 ## Arrêt volontaire d’une brique
+
+Après la preuve d’autonomie, relancez les briques autonomes et le gateway. Attendez que les quatre routes `/health` soient `ready` avant de faire l’arrêt :
+
+Depuis `McpDiffusion` :
+
+```bash
+uvx --from podman-compose podman-compose -p p8demo start insee-mcp melodi-mcp rmes-mcp
+```
+
+Dans un second terminal, depuis `McpDiffusion`, démarrez le gateway et laissez-le tourner :
+
+```bash
+cd ../mcpgateway
+uv sync
+uv run mcpgateway --registry ../McpDiffusion/deploy/gateway-demo.yaml --host 127.0.0.1 --port 8100
+```
 
 Pour montrer le domaine de panne d’un processus, laissez les autres serveurs démarrés et arrêtez seulement insee.fr :
 
@@ -117,14 +151,25 @@ uv run python scripts/demo_split.py \
 
 Résultat réellement observé : l’outil INSEE n’est plus exposé par la découverte du gateway ; `search_rmes_graphs` répond toujours via le même gateway. Un client direct sur `8001` échoue également. L’agrégat en processus est distinct : il conserve ses propres applications montées tant que son processus et ses propres backends sont disponibles.
 
+## Retour opérateur
+
+`send_feedback` appartient au gateway, pas aux briques. Avec la recherche d’outils activée, découvrez-le via `search_tools`, puis appelez `call_tool` ; le gateway journalise le rapport et ne dépend pas d’un service amont pour l’enregistrer. Les deux appels suivants ont été exécutés pendant que la brique INSEE était arrêtée :
+
+```bash
+uv run fastmcp call http://127.0.0.1:8100/mcp search_tools query='send feedback report to gateway operators' --json
+uv run fastmcp call http://127.0.0.1:8100/mcp call_tool name=send_feedback arguments='{"server":"insee","author":"p8-demo","feedback":"Walkthrough smoke test: feedback is owned by the gateway."}' --json
+```
+
+Le second appel a répondu `{"status":"success","message":"Feedback recorded successfully.","timestamp":"2026-11-01T20:58:20.117811Z"}`.
+
 Pour arrêter la démonstration, arrêtez le processus du gateway (Ctrl-C), puis, depuis `McpDiffusion` :
 
 ```bash
 uvx --from podman-compose podman-compose -p p8demo down -v
 ```
 
-`-v` supprime le volume Elasticsearch propre au projet de démonstration.
+`-v` supprime le volume Elasticsearch propre au projet de démonstration. Lors de la validation, `podman-compose` a affiché un message d’erreur non bloquant pour `p8demo_inspector_1` (service non démarré) ; la commande a renvoyé 0, supprimé tous les conteneurs `p8demo` et retiré le volume `p8demo_elasticsearch-data`.
 
 ## Note sur la reproductibilité
 
-La validation de bout en bout a utilisé le working tree courant de McpDiffusion et le working tree courant de McpGateway. Les changements de split et les changements P5/P6 du gateway ne sont pas encore disponibles comme deux révisions propres clonables ; le parcours a donc été réellement exécuté, mais pas depuis un clone vierge. Une fois ces changements publiés, rejouer les commandes ci-dessus depuis deux checkouts adjacents vérifiera la condition « clean clone » sans changer le scénario.
+La validation de bout en bout de cette version a été exécutée depuis deux clones propres, McpDiffusion `3c7c92b25ce684e5fba5083f5c4f76ce1dc9909f` et McpGateway `3b5c265be18a9a30e1795e3d0c62e0d1b3513cc7`. `uv sync` a réussi dans les deux ; Compose a restauré le snapshot et les quatre routes `/health` ont indiqué `ready`. Le harnais s’est terminé avec le code 0 et a confirmé l’égalité des données structurées directes, agrégées et routées pour les résultats INSEE, MELODI et RMES. Les appels directs aux trois briques ont aussi réussi avec les autres processus de brique arrêtés ; les appels à l’agrégat ont réussi avec les trois conteneurs autonomes arrêtés. Après l’arrêt d’INSEE, le gateway a omis son outil dans `search_tools` tandis que RMES restait appelable ; le retour opérateur a répondu avec succès alors qu’INSEE était arrêté. La publication obtenue dans ce snapshot date de mai 2016 : la démo montre la composition, pas la fraîcheur des données.
