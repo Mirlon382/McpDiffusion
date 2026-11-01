@@ -11,11 +11,11 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack
 from typing import Any, cast
 
+from diffusion_core.elasticsearch import elasticsearch_lifespan
 from fastmcp import FastMCP
 from fastmcp.server.lifespan import Lifespan, lifespan
 
 from ..settings import Settings
-from .elasticsearch import elasticsearch_lifespan
 from .insee import InseeContext, insee_lifespan
 from .melodi import MelodiContext, melodi_lifespan
 from .rmes import RmesContext, rmes_lifespan

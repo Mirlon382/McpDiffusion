@@ -4,13 +4,13 @@ Elasticsearch vocabulary stops here. Tools never see a `Hit`, a `_source` or an 
 envelope, so a change in the index shape is contained to this file.
 """
 
+from diffusion_core.elasticsearch import elasticsearch_tool_error_handler
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.dsl import AsyncSearch, Q
 from elasticsearch.dsl.query import Query
 from elasticsearch.dsl.response import Hit
 from elasticsearch.dsl.utils import AttrList
 
-from ...errors.elasticsearch_tool_error_handler import elasticsearch_tool_error_handler
 from ...models.melodi import (
     ColumnResult,
     DatasetDescription,

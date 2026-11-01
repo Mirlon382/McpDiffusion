@@ -1,9 +1,9 @@
 """Tool: run_rmes_sparql."""
 
+from diffusion_core.errors import AppToolError, ErrorCode
 from fastmcp.dependencies import Depends
 
 from ...dependencies.rmes import get_rmes_graph_store_service
-from ...errors import AppToolError, ErrorCode
 from ...models.rmes import (
     DEFAULT_QUERY_TIMEOUT_SECONDS,
     DEFAULT_ROW_LIMIT,

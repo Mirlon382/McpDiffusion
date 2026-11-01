@@ -1,23 +1,14 @@
-"""Every value this server can be configured with."""
+"""Every value this server can be configured with.
 
+The HTTP-server, rate-limit and logging fields are the core's `ServerSettings`. Everything
+here belongs to this one process: tool selection and the backends the three sources use.
+"""
+
+from diffusion_core.settings import ServerSettings
 from pydantic import model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
-    # HTTP server ------------------------------------------------------------------------------------------------------
-    mcp_host: str = "0.0.0.0"
-    mcp_port: int = 8000
-    # JSON list of the hostnames clients use to reach this server, checked against the Host
-    # header. "*" accepts any host, which disables the check.
-    allowed_hosts: list[str] = ["*"]
-    # JSON list of browser origins allowed to call the server. Empty rejects every cross-origin
-    # browser request, which is right until a browser-based client needs in.
-    allowed_origins: list[str] = []
-    # Peers whose X-Forwarded-For header is believed; anything else keeps its real socket address.
-    # Accepts addresses, CIDR networks and literals. Widening this lets callers forge their own address.
-    trusted_proxy_hosts: list[str] = ["127.0.0.1"]
-
+class Settings(ServerSettings):
     # Tool selection ---------------------------------------------------------------------------------------------------
     # insee.fr, the website. MELODI and RMES are INSEE sources too; this flag is only the site.
     enable_insee_tools: bool = True
@@ -60,13 +51,6 @@ class Settings(BaseSettings):
     rmes_graph_listing_max_rows: int = 1000
     rmes_graph_cache_ttl_seconds: float = 3600.0
 
-    # Rate limiting ----------------------------------------------------------------------------------------------------
-    rate_limit_max_requests: int = 100
-    rate_limit_window_minutes: int = 1
-
-    # Logging ----------------------------------------------------------------------------------------------------------
-    log_level: str = "INFO"
-
     @model_validator(mode="after")
     def require_elasticsearch_when_it_is_searched(self) -> "Settings":
         """Fail at startup rather than on the first search that needs a host."""
@@ -77,11 +61,6 @@ class Settings(BaseSettings):
                 "ENABLE_MELODI_TOOLS=false."
             )
         return self
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore",
-    )
 
 
 def load_settings() -> Settings:

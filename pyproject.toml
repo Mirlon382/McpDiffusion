@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "MCP server for INSEE data diffusion"
 requires-python = ">=3.12"
 dependencies = [
+    "diffusion-mcp-core[elasticsearch]",
     "fastmcp>=4.0.0",
     "elasticsearch[async]==9.5.0",
     "uvicorn==0.52.4",
@@ -16,6 +17,12 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "trafilatura==2.2.0",
 ]
+
+[tool.uv.workspace]
+members = ["packages/core"]
+
+[tool.uv.sources]
+diffusion-mcp-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

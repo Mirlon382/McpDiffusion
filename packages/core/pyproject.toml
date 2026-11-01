@@ -1,0 +1,24 @@
+[project]
+name = "diffusion-mcp-core"
+version = "0.1.0"
+description = "Shared MCP application layer for the INSEE diffusion servers: app factory, server settings, error contract, logging, rate-limit key"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=4.0.0",
+    "uvicorn==0.52.4",
+    "pydantic-settings>=2.0.0",
+]
+
+# A brick that searches Elasticsearch installs the driver through this extra; a brick
+# that does not, never sees it. Nothing else in the core imports `elasticsearch`.
+[project.optional-dependencies]
+elasticsearch = [
+    "elasticsearch[async]==9.5.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/diffusion_core"]

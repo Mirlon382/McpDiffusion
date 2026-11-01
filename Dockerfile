@@ -16,16 +16,22 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /bin/
 
 # Dependencies before source: a one-line code edit must not invalidate the layer that installs them.
+# The member's pyproject must be present to resolve the workspace; its source is not needed until
+# the final sync, so a core code edit invalidates only the source layer, not the dependency layer.
 COPY pyproject.toml uv.lock /app/
+COPY packages/core/pyproject.toml /app/packages/core/pyproject.toml
 
 # The cache mount survives between builds without being stored in the image.
 # --locked fails when uv.lock is not current for pyproject.toml. Plain `uv sync` would rewrite the
 # lock and install versions nobody tested; --frozen would use a stale lock and silently omit a
 # dependency that was added but never locked.
+# --no-install-workspace keeps every workspace package (root and core) out of this layer: it
+# installs only the third-party dependencies, then the next layer installs the workspace itself.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --no-install-project --locked
+    uv sync --no-dev --no-install-workspace --locked
 
 COPY src/ /app/src/
+COPY packages/ /app/packages/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --locked
 
@@ -53,8 +59,11 @@ RUN groupadd --gid 1000 app \
  && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin app
 
 # --chown during the copy, never a later chown: that would duplicate every file into a new layer.
+# uv installs the workspace projects editable: the venv's .pth files point at /app/src and
+# /app/packages/core/src, so both trees ship at exactly those paths alongside the venv.
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/src /app/src
+COPY --from=builder --chown=app:app /app/packages /app/packages
 
 USER app
 

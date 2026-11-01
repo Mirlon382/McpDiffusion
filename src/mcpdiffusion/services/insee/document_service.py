@@ -7,10 +7,10 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from diffusion_core.errors import AppToolError, ErrorCode
 from trafilatura import extract
 from trafilatura.settings import Extractor
 
-from ...errors import AppToolError, ErrorCode
 from ...models.insee import DocumentResult, TableOfContents
 
 logger = logging.getLogger(__name__)

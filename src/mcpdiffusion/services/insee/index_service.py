@@ -11,6 +11,7 @@ boolean flags, so no caller can ask for a combination that makes no sense.
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
+from diffusion_core.elasticsearch import elasticsearch_tool_error_handler
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.dsl import AsyncSearch, Q
 from elasticsearch.dsl.query import Query
@@ -18,7 +19,6 @@ from elasticsearch.dsl.response import Response
 
 from ...data.insee.geography import DICT_GEO
 from ...data.insee.themes import DICT_THEME_CONJ, KEYS_THEME_NIV1
-from ...errors.elasticsearch_tool_error_handler import elasticsearch_tool_error_handler
 from ...models.insee import DocumentHit
 
 RAPIDES_COLLECTION = "Informations rapides"

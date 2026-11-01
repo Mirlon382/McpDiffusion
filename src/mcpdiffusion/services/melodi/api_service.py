@@ -3,8 +3,7 @@
 from typing import Any
 
 import httpx
-
-from ...errors import AppToolError, ErrorCode
+from diffusion_core.errors import AppToolError, ErrorCode
 
 
 class MelodiApiService:

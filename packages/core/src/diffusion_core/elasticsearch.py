@@ -1,6 +1,9 @@
-"""The single place Elasticsearch failures become errors the caller can act on.
+"""The Elasticsearch client factory and the single place its failures become caller-actionable errors.
 
-Two disjoint exception families reach here, and both have to be named:
+Lives behind the `elasticsearch` extra: only a brick that searches Elasticsearch installs the
+driver, opens the client, or imports this module. The core itself never does.
+
+Two disjoint exception families reach the translator, and both have to be named:
 
 - `elastic_transport.TransportError` -- the request never got a usable answer (refused, timed
   out, TLS, unparseable). `ConnectionError` and `ConnectionTimeout` are subclasses.
@@ -10,13 +13,54 @@ Two disjoint exception families reach here, and both have to be named:
 `ApiError` does not inherit from `TransportError`, so catching one never catches the other.
 """
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 
-from elasticsearch import ApiError, TransportError
+from elasticsearch import ApiError, AsyncElasticsearch, TransportError
 
-from .error import AppToolError, ErrorCode
+from .errors import AppToolError, ErrorCode
+
+logger = logging.getLogger(__name__)
+
+
+def elasticsearch_client(
+    host: str,
+    tls_verify: bool,
+    request_timeout_seconds: int,
+    max_retries: int,
+) -> AsyncElasticsearch:
+    """Return an unconnected client for `host`. Construction opens no connection, so a wrong
+    host surfaces on the first search, not here."""
+    return AsyncElasticsearch(
+        host,
+        verify_certs=tls_verify,
+        request_timeout=request_timeout_seconds,
+        max_retries=max_retries,
+        retry_on_timeout=True,
+    )
+
+
+@asynccontextmanager
+async def elasticsearch_lifespan(
+    host: str,
+    tls_verify: bool,
+    request_timeout_seconds: int,
+    max_retries: int,
+) -> AsyncIterator[AsyncElasticsearch]:
+    """Open the shared client and close it on shutdown."""
+    client = elasticsearch_client(
+        host=host,
+        tls_verify=tls_verify,
+        request_timeout_seconds=request_timeout_seconds,
+        max_retries=max_retries,
+    )
+    logger.info("Elasticsearch client initialized for %s", host)
+    try:
+        yield client
+    finally:
+        await client.close()
 
 
 @asynccontextmanager
