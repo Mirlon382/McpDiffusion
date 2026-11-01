@@ -3,7 +3,7 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TypedDict
 
 from elasticsearch import AsyncElasticsearch
 from httpx import AsyncClient, Timeout
@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 USER_AGENT = "McpDiffusion/0.1.0"
 
 
+class MelodiContext(TypedDict):
+    """The lifespan-context keys the Melodi family contributes."""
+
+    melodi_index_service: MelodiIndexService
+    melodi_api_service: MelodiApiService
+
+
 @asynccontextmanager
 async def melodi_lifespan(
     elasticsearch_client: AsyncElasticsearch,
@@ -25,7 +32,7 @@ async def melodi_lifespan(
     connect_timeout_seconds: int,
     datasets_index: str,
     columns_index: str,
-) -> AsyncIterator[dict[str, Any]]:
+) -> AsyncIterator[MelodiContext]:
     """Build the Melodi services and close the API client on shutdown."""
     http_client = AsyncClient(
         base_url=data_base_url,

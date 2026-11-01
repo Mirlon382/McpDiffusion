@@ -3,7 +3,7 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TypedDict
 
 from httpx import AsyncClient
 
@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 USER_AGENT = "McpDiffusion/0.1.0"
 
 
+class RmesContext(TypedDict):
+    """The lifespan-context keys the RMES family contributes."""
+
+    rmes_graph_store_service: RmesGraphStoreService
+
+
 @asynccontextmanager
 async def rmes_lifespan(
     sparql_endpoint_url: str,
@@ -22,7 +28,7 @@ async def rmes_lifespan(
     graph_listing_timeout_seconds: float,
     graph_listing_max_rows: int,
     graph_cache_ttl_seconds: float,
-) -> AsyncIterator[dict[str, Any]]:
+) -> AsyncIterator[RmesContext]:
     """Build the RMES service and close its client on shutdown.
 
     RMES passes its own timeout per query, so this client sets none.

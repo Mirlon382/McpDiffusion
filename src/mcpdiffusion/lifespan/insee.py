@@ -3,7 +3,7 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TypedDict
 
 from elasticsearch import AsyncElasticsearch
 from httpx import AsyncClient, Timeout
@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
 
+class InseeContext(TypedDict):
+    """The lifespan-context keys the insee.fr family contributes."""
+
+    insee_index_service: InseeIndexService
+    insee_document_service: InseeDocumentService
+
+
 @asynccontextmanager
 async def insee_lifespan(
     elasticsearch_client: AsyncElasticsearch,
@@ -25,7 +32,7 @@ async def insee_lifespan(
     connect_timeout_seconds: int,
     publications_index: str,
     document_max_markdown_chars: int,
-) -> AsyncIterator[dict[str, Any]]:
+) -> AsyncIterator[InseeContext]:
     """Build the insee.fr services and close the scraping client on shutdown."""
     http_client = AsyncClient(
         base_url=base_url,
