@@ -10,13 +10,15 @@ The Elasticsearch module is deliberately absent: it lives behind the `elasticsea
 extra and must only be imported by a brick that installs it.
 """
 
-from .app import McpApplication, create_server
+from .app import HealthCheck, McpApplication, create_server
 from .errors import AppToolError, ErrorCode
-from .settings import ServerSettings
+from .settings import ElasticsearchServerSettings, ServerSettings
 
 __all__ = [
     "AppToolError",
+    "ElasticsearchServerSettings",
     "ErrorCode",
+    "HealthCheck",
     "McpApplication",
     "ServerSettings",
     "create_server",

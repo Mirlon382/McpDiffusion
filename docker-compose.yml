@@ -91,6 +91,67 @@ services:
     ports:
       - "8000:8000"
 
+  # --- BEGIN GENERATED FROM bricks.yaml (scripts/render_bricks.py) ---
+  # INSEE - insee.fr -- http://insee-mcp:8001/mcp
+  insee-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: insee-mcp
+    image: insee-mcp:local
+    depends_on:
+      es-restore:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      # Listen on every interface: the container's loopback is not reachable from the host.
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8001
+      # Defaults to the service above; an ES_HOST in your .env wins.
+      ES_HOST: ${ES_HOST:-http://elasticsearch:9200}
+    ports:
+      - "8001:8001"
+
+  # INSEE - MELODI -- http://melodi-mcp:8002/mcp
+  melodi-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: melodi-mcp
+    image: melodi-mcp:local
+    depends_on:
+      es-restore:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      # Listen on every interface: the container's loopback is not reachable from the host.
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8002
+      # Defaults to the service above; an ES_HOST in your .env wins.
+      ES_HOST: ${ES_HOST:-http://elasticsearch:9200}
+    ports:
+      - "8002:8002"
+
+  # INSEE - RMES -- http://rmes-mcp:8003/mcp
+  rmes-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: rmes-mcp
+    image: rmes-mcp:local
+    env_file:
+      - .env
+    environment:
+      # Listen on every interface: the container's loopback is not reachable from the host.
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8003
+    ports:
+      - "8003:8003"
+
+  # --- END GENERATED FROM bricks.yaml ---
+
   # Official MCP debugging UI: lists the server's tools and calls them by hand, no LLM involved.
   inspector:
     image: ghcr.io/modelcontextprotocol/inspector:latest

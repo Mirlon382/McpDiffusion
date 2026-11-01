@@ -1,35 +1,33 @@
-"""The published tool contract: registration, schemas, injection, forwarding, and errors.
+"""The published tool contract: names, schemas, injection, forwarding, and errors.
 
-Every test drives the real functions from `mcpdiffusion.tools` through an in-memory `Client`,
-against the stub services from `tests.fakes`. What is under test is the MCP layer itself: what
-the model sees in the schema, what it gets back, and what never leaks.
+Every test drives the real brick tool functions through an in-memory `Client`, against stub
+services. What is under test is the MCP layer itself: what the model sees in the schema, what it
+gets back, and what never leaks.
 """
 
 from typing import Any
 
 import pytest
 from diffusion_core.errors import AppToolError, ErrorCode
-
-from mcpdiffusion.data.insee.indicators import KEY_INDICATORS
-from mcpdiffusion.models.insee import DocumentHit, DocumentResult
-from mcpdiffusion.models.melodi import (
+from insee_mcp.data.indicators import KEY_INDICATORS
+from insee_mcp.models import DocumentHit, DocumentResult
+from melodi_mcp.models import (
     ColumnResult,
     DatasetDescription,
     DatasetSearchResult,
     Modality,
 )
-from mcpdiffusion.models.rmes import (
+from rmes_mcp.models import (
     MAX_QUERY_TIMEOUT_SECONDS,
     GraphRow,
     ResourceProperty,
 )
-from mcpdiffusion.services.rmes.graph_store_service import SparqlResponse
+from rmes_mcp.services.graph_store_service import SparqlResponse
+
 from tests.conftest import (
     ALL_TOOL_NAMES,
     INJECTED_PARAMETERS,
-    build_test_mcp,
     call_tool,
-    make_settings,
     result_text,
     tool_map,
 )
@@ -39,7 +37,7 @@ from tests.fakes import FakeInseeIndexService
 class TestPublishedSurface:
     """What a client sees at connect: every name, a description, and no injected plumbing."""
 
-    async def test_all_twelve_tools_are_registered(self, mcp: Any) -> None:
+    async def test_exactly_the_eleven_brick_tools_are_published(self, mcp: Any) -> None:
         tools = await tool_map(mcp)
         assert list(tools) == ALL_TOOL_NAMES
 
@@ -55,15 +53,6 @@ class TestPublishedSurface:
     async def test_field_descriptions_reach_the_parameter_schema(self, mcp: Any) -> None:
         documents = (await tool_map(mcp))["search_insee_documents"]
         assert "Natural-language search query" in documents.input_schema["properties"]["query"]["description"]
-
-    async def test_disabled_families_are_absent_not_hidden(self, lifespan_context: dict[str, Any]) -> None:
-        settings = make_settings(
-            enable_insee_tools=False,
-            enable_melodi_tools=False,
-            enable_rmes_tools=False,
-        )
-        tools = await tool_map(build_test_mcp(lifespan_context, settings))
-        assert list(tools) == ["send_feedback"]
 
 
 class TestInseeSearchTools:
@@ -486,30 +475,3 @@ class TestRmesTools:
         )
         assert result.is_error
         assert graph_store.calls == []
-
-
-class TestFeedbackTool:
-    async def test_feedback_is_recorded_and_confirmed(self, mcp: Any) -> None:
-        result = await call_tool(
-            mcp=mcp,
-            tool_name="send_feedback",
-            arguments={
-                "author": "tester",
-                "feedback": "search_melodi_datasets missed DS_PRIX.",
-            },
-        )
-        assert not result.is_error
-        assert result.structured_content["status"] == "success"
-        assert result.structured_content["message"] == "Feedback recorded successfully."
-        assert result.structured_content["timestamp"]
-
-    async def test_an_overlong_author_is_rejected_by_the_schema(self, mcp: Any) -> None:
-        result = await call_tool(
-            mcp=mcp,
-            tool_name="send_feedback",
-            arguments={
-                "author": "a" * 101,
-                "feedback": "x",
-            },
-        )
-        assert result.is_error

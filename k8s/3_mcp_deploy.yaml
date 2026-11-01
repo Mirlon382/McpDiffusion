@@ -42,7 +42,30 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8000          # matches Service.targetPort
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: mcpdiffusion.lab.sspcloud.fr
+            periodSeconds: 10
+            timeoutSeconds: 6
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: mcpdiffusion.lab.sspcloud.fr
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
           env:
+          - name: HEALTH_PROBE_TIMEOUT_SECONDS
+            value: "5"
           - name: ES_HOST
             value: "http://elasticsearch-service:9200"
           # The hostname the Ingress publishes. Without it ALLOWED_HOSTS defaults to "*",

@@ -10,10 +10,10 @@ tool actually forwarded, not only on what it returned.
 
 from typing import Any
 
-from mcpdiffusion.models.insee import DocumentHit, DocumentResult
-from mcpdiffusion.models.melodi import ColumnResult, DatasetSearchResult
-from mcpdiffusion.models.rmes import GraphRow, ResourceProperty
-from mcpdiffusion.services.rmes.graph_store_service import SparqlResponse
+from insee_mcp.models import DocumentHit, DocumentResult
+from melodi_mcp.models import ColumnResult, DatasetSearchResult
+from rmes_mcp.models import GraphRow, ResourceProperty
+from rmes_mcp.services.graph_store_service import SparqlResponse
 
 
 class StubService:

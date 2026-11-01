@@ -1,0 +1,45 @@
+# Local-only gateway registry for docs/demo-split-3-servers.md.
+# Host ports are published by docker-compose.yml; no Docker-network DNS is assumed.
+gateway:
+  name: McpDiffusion split demo
+  tool_search:
+    enabled: true
+    max_results: 5
+  catalog:
+    enabled: true
+    include_tool_inventory: true
+    include_guide: true
+
+servers:
+  - name: insee
+    url: http://127.0.0.1:8001/mcp
+    transport: http
+    domain: Insee
+    description: Publications, Informations rapides, chiffres clés et indicateurs de la page d'accueil insee.fr
+    tags: [insee, publications, rapid-releases, key-figures, homepage-indicators]
+    enabled: true
+    timeout: 45.0
+    max_concurrency: 4
+    cache_ttl: 300
+
+  - name: melodi
+    url: http://127.0.0.1:8002/mcp
+    transport: http
+    domain: Insee
+    description: Catalogue MELODI des jeux de données statistiques, modalités et observations
+    tags: [insee, melodi, datasets, modalities, observations]
+    enabled: true
+    timeout: 45.0
+    max_concurrency: 4
+    cache_ttl: 300
+
+  - name: rmes
+    url: http://127.0.0.1:8003/mcp
+    transport: http
+    domain: Insee
+    description: Métadonnées statistiques INSEE, définitions, nomenclatures et classifications via SPARQL
+    tags: [insee, rmes, metadata, definitions, nomenclatures, classifications, sparql]
+    enabled: true
+    timeout: 60.0
+    max_concurrency: 2
+    cache_ttl: 600

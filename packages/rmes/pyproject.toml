@@ -1,0 +1,26 @@
+[project]
+name = "rmes-mcp"
+version = "0.1.0"
+description = "MCP server exposing INSEE statistical metadata, definitions and nomenclatures over SPARQL (rdf.insee.fr)"
+requires-python = ">=3.12"
+# Direct dependencies and their source: the core (`server.py`, `lifespan.py`, `tools/`),
+# FastMCP (`server.py`, `lifespan.py`, `tools/`), httpx (`lifespan.py`,
+# `services/graph_store_service.py`), and pydantic (`models.py`). RMES uses no Elasticsearch
+# or HTML parser and depends on the core WITHOUT its `elasticsearch` extra. The exact httpx pin
+# deliberately constrains the tested SPARQL client runtime.
+dependencies = [
+    "diffusion-mcp-core",
+    "fastmcp>=4.0.0",
+    "httpx==0.28.1",
+    "pydantic>=2.12.0",
+]
+
+[tool.uv.sources]
+diffusion-mcp-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rmes_mcp"]

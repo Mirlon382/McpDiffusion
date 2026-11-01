@@ -6,8 +6,10 @@ callable, and its settings object.
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import Any
 
 import uvicorn
 from fastmcp import FastMCP
@@ -17,12 +19,18 @@ from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
 from fastmcp.server.middleware.logging import LoggingMiddleware
 from fastmcp.server.middleware.rate_limiting import SlidingWindowRateLimitingMiddleware
 from fastmcp.server.middleware.timing import TimingMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 from .client_host import resolve_client_host
 from .logging import build_logging_config, configure_logging
 from .settings import ServerSettings
 
 logger = logging.getLogger(__name__)
+
+
+type BackendStatuses = dict[str, bool]
+HealthCheck = Callable[[Any | None], Awaitable[BackendStatuses]]
 
 
 @dataclass
@@ -37,6 +45,10 @@ class McpApplication[SettingsT: ServerSettings]:
     mcp: FastMCP
     app: StarletteWithLifespan
     settings: SettingsT
+    name: str
+    version: str
+    health_statuses: Callable[[], Awaitable[BackendStatuses]]
+    health_payload: Callable[[], Awaitable[dict[str, str | dict[str, str]]]]
 
     def run(self) -> None:
         """Serve the ASGI app with uvicorn, honouring the trusted proxies for client addresses."""
@@ -52,8 +64,10 @@ class McpApplication[SettingsT: ServerSettings]:
 
 def create_server[SettingsT: ServerSettings](
     name: str,
+    version: str,
     instructions: str,
-    lifespan: Lifespan,
+    lifespan: Lifespan | None,
+    health_check: HealthCheck,
     register: Callable[[FastMCP, SettingsT], None],
     settings: SettingsT,
 ) -> McpApplication[SettingsT]:
@@ -64,14 +78,64 @@ def create_server[SettingsT: ServerSettings](
     """
     configure_logging(settings.log_level)
 
+    lifespan_state: dict[str, Any] = {"context": None}
+
+    @asynccontextmanager
+    async def tracked_lifespan(server: FastMCP[Any]) -> AsyncIterator[Any]:
+        if lifespan is None:
+            yield {}
+            return
+
+        async with lifespan(server) as context:
+            lifespan_state["context"] = context
+            try:
+                yield context
+            finally:
+                lifespan_state["context"] = None
+
+    async def health_statuses() -> BackendStatuses:
+        """Run the source-specific checks against the active lifespan clients."""
+        return await health_check(lifespan_state["context"])
+
+    async def health_payload() -> dict[str, str | dict[str, str]]:
+        """Shape a safe, stable response for readiness probes and operators."""
+        statuses = await health_statuses()
+        backends = {backend: "ready" if ready else "unavailable" for backend, ready in statuses.items()}
+        ready = bool(statuses) and all(statuses.values())
+        return {
+            "name": name,
+            "version": version,
+            "status": "ready" if ready else "unavailable",
+            "backends": backends,
+        }
+
     mcp = FastMCP(
         name,
         instructions=instructions,
+        version=version,
         # Only AppToolError messages reach the caller; anything else is a bug and is replaced
         # by a generic message.
         mask_error_details=True,
-        lifespan=lifespan,
+        lifespan=tracked_lifespan,
     )
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_route(_request: Request) -> Response:
+        payload = await health_payload()
+        return JSONResponse(
+            payload,
+            status_code=200 if payload["status"] == "ready" else 503,
+        )
+
+    @mcp.custom_route("/health/live", methods=["GET"])
+    async def liveness_route(_request: Request) -> Response:
+        return JSONResponse(
+            {
+                "name": name,
+                "version": version,
+                "status": "ok",
+            },
+        )
 
     register(mcp, settings)
 
@@ -117,4 +181,8 @@ def create_server[SettingsT: ServerSettings](
         mcp=mcp,
         app=app,
         settings=settings,
+        name=name,
+        version=version,
+        health_statuses=health_statuses,
+        health_payload=health_payload,
     )

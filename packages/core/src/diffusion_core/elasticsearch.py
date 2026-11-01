@@ -49,7 +49,7 @@ async def elasticsearch_lifespan(
     request_timeout_seconds: int,
     max_retries: int,
 ) -> AsyncIterator[AsyncElasticsearch]:
-    """Open the shared client and close it on shutdown."""
+    """Open the Elasticsearch client and close it on shutdown."""
     client = elasticsearch_client(
         host=host,
         tls_verify=tls_verify,

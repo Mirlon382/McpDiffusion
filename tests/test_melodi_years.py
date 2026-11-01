@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from mcpdiffusion.tools.melodi.get_observations_tool import (
+from melodi_mcp.tools.get_observations_tool import (
     keep_requested_years,
     read_observation_year,
 )

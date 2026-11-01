@@ -11,7 +11,10 @@ resolution-markers = [
 [manifest]
 members = [
     "diffusion-mcp-core",
+    "insee-mcp",
     "mcpdiffusion",
+    "melodi-mcp",
+    "rmes-mcp",
 ]
 
 [[package]]
@@ -617,6 +620,7 @@ version = "0.1.0"
 source = { editable = "packages/core" }
 dependencies = [
     { name = "fastmcp" },
+    { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
@@ -630,6 +634,7 @@ elasticsearch = [
 requires-dist = [
     { name = "elasticsearch", extras = ["async"], marker = "extra == 'elasticsearch'", specifier = "==9.5.0" },
     { name = "fastmcp", specifier = ">=4.0.0" },
+    { name = "pydantic", specifier = ">=2.12.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "uvicorn", specifier = "==0.52.4" },
 ]
@@ -1013,6 +1018,31 @@ wheels = [
 ]
 
 [[package]]
+name = "insee-mcp"
+version = "0.1.0"
+source = { editable = "packages/insee" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "diffusion-mcp-core", extra = ["elasticsearch"] },
+    { name = "fastmcp" },
+    { name = "httpx" },
+    { name = "lxml" },
+    { name = "pydantic" },
+    { name = "trafilatura" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "beautifulsoup4", specifier = "==4.15.0" },
+    { name = "diffusion-mcp-core", extras = ["elasticsearch"], editable = "packages/core" },
+    { name = "fastmcp", specifier = ">=4.0.0" },
+    { name = "httpx", specifier = "==0.28.1" },
+    { name = "lxml", specifier = "==6.1.2" },
+    { name = "pydantic", specifier = ">=2.12.0" },
+    { name = "trafilatura", specifier = "==2.2.0" },
+]
+
+[[package]]
 name = "jaraco-classes"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1328,18 +1358,11 @@ name = "mcpdiffusion"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "diffusion-mcp-core", extra = ["elasticsearch"] },
-    { name = "elasticsearch", extra = ["async"] },
+    { name = "diffusion-mcp-core" },
     { name = "fastmcp" },
-    { name = "httpx" },
-    { name = "lxml" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "starlette" },
-    { name = "trafilatura" },
-    { name = "uvicorn" },
+    { name = "insee-mcp" },
+    { name = "melodi-mcp" },
+    { name = "rmes-mcp" },
 ]
 
 [package.dev-dependencies]
@@ -1352,18 +1375,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = "==4.15.0" },
-    { name = "diffusion-mcp-core", extras = ["elasticsearch"], editable = "packages/core" },
-    { name = "elasticsearch", extras = ["async"], specifier = "==9.5.0" },
+    { name = "diffusion-mcp-core", editable = "packages/core" },
     { name = "fastmcp", specifier = ">=4.0.0" },
-    { name = "httpx", specifier = "==0.28.1" },
-    { name = "lxml", specifier = "==6.1.2" },
-    { name = "pydantic-settings", specifier = ">=2.0.0" },
-    { name = "python-dotenv", specifier = "==1.2.3" },
-    { name = "requests", specifier = "==2.34.2" },
-    { name = "starlette", specifier = "==1.6.0" },
-    { name = "trafilatura", specifier = "==2.2.0" },
-    { name = "uvicorn", specifier = "==0.52.4" },
+    { name = "insee-mcp", editable = "packages/insee" },
+    { name = "melodi-mcp", editable = "packages/melodi" },
+    { name = "rmes-mcp", editable = "packages/rmes" },
 ]
 
 [package.metadata.requires-dev]
@@ -1381,6 +1397,25 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "melodi-mcp"
+version = "0.1.0"
+source = { editable = "packages/melodi" }
+dependencies = [
+    { name = "diffusion-mcp-core", extra = ["elasticsearch"] },
+    { name = "fastmcp" },
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "diffusion-mcp-core", extras = ["elasticsearch"], editable = "packages/core" },
+    { name = "fastmcp", specifier = ">=4.0.0" },
+    { name = "httpx", specifier = "==0.28.1" },
+    { name = "pydantic", specifier = ">=2.12.0" },
 ]
 
 [[package]]
@@ -2102,21 +2137,6 @@ wheels = [
 ]
 
 [[package]]
-name = "requests"
-version = "2.34.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "charset-normalizer" },
-    { name = "idna" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
-]
-
-[[package]]
 name = "rich"
 version = "15.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2140,6 +2160,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e2/d6/d0b9fafc73b65767200da027acab1db1bdb1048f4fea5ebf659df01c700e/rich_rst-2.1.0.tar.gz", hash = "sha256:f4d117b49697f338769759fa5cacf5197da4888b347b9fda2e50aef5cd8d93bd", size = 302732, upload-time = "2026-07-05T02:59:44.308Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/68/1fc93dd759605b5d00fc98b50200739e41ed32bd22d6ba35ca6c3932371b/rich_rst-2.1.0-py3-none-any.whl", hash = "sha256:7ecd1343ee12c879d0e7ae74c3eb6d263b023d2929c6d114212eb1fd91057255", size = 272987, upload-time = "2026-07-05T02:59:42.792Z" },
+]
+
+[[package]]
+name = "rmes-mcp"
+version = "0.1.0"
+source = { editable = "packages/rmes" }
+dependencies = [
+    { name = "diffusion-mcp-core" },
+    { name = "fastmcp" },
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "diffusion-mcp-core", editable = "packages/core" },
+    { name = "fastmcp", specifier = ">=4.0.0" },
+    { name = "httpx", specifier = "==0.28.1" },
+    { name = "pydantic", specifier = ">=2.12.0" },
 ]
 
 [[package]]

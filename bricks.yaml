@@ -1,0 +1,51 @@
+# The bricks' metadata: the single source of truth for the three surfaces that name a brick.
+#
+#   uv run python scripts/render_bricks.py          # rewrite them from this file
+#   uv run python scripts/render_bricks.py --check  # fail if any of them has drifted
+#
+# It renders the brick services in docker-compose.yml, one .env.example per brick, and the
+# gateway's registry fragment. Nothing in here is read at run time by a server: a brick reads
+# its settings from the environment, and this file only describes how it is deployed.
+
+# One domain for the whole family, named as decision 6 spells it.
+domain: Insee
+
+# How a client reaches a brick once it is up. `{name}` and `{port}` come from the entry below.
+url_pattern: http://{name}:{port}/mcp
+
+# Values for the variables that have no default -- only where an example is obvious from the
+# variable itself. A brick that reads none of them ignores this.
+environment_examples:
+  ES_HOST: http://localhost:9200
+
+bricks:
+  - name: insee-mcp
+    # The namespace prefixes gateway tools; the compose service name remains the URL host.
+    namespace: insee
+    # The uv workspace member whose dependency group the brick's image installs, and the package
+    # its source lives in.
+    group: insee
+    package: packages/insee
+    title: INSEE - insee.fr
+    description: Publications, Informations rapides, chiffres clés et indicateurs de la page d'accueil insee.fr
+    # Tags are gateway catalogue filters for this brick's capabilities.
+    tags: [insee, publications, rapid-releases, key-figures, homepage-indicators]
+    port: 8001
+
+  - name: melodi-mcp
+    namespace: melodi
+    group: melodi
+    package: packages/melodi
+    title: INSEE - MELODI
+    description: Catalogue MELODI des jeux de données statistiques, modalités et observations
+    tags: [insee, melodi, datasets, modalities, observations]
+    port: 8002
+
+  - name: rmes-mcp
+    namespace: rmes
+    group: rmes
+    package: packages/rmes
+    title: INSEE - RMES
+    description: Métadonnées statistiques INSEE, définitions, nomenclatures et classifications via SPARQL
+    tags: [insee, rmes, metadata, definitions, nomenclatures, classifications, sparql]
+    port: 8003

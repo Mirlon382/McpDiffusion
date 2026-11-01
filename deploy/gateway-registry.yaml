@@ -1,0 +1,46 @@
+# The gateway's registry fragment for the three bricks.
+#
+# Names are gateway namespaces; URLs retain the Docker Compose service hosts.
+# Generated from bricks.yaml -- run `uv run python scripts/render_bricks.py`.
+
+servers:
+- name: insee
+  url: http://insee-mcp:8001/mcp
+  transport: http
+  domain: Insee
+  description: Publications, Informations rapides, chiffres clés et indicateurs de
+    la page d'accueil insee.fr
+  tags:
+  - insee
+  - publications
+  - rapid-releases
+  - key-figures
+  - homepage-indicators
+  enabled: true
+- name: melodi
+  url: http://melodi-mcp:8002/mcp
+  transport: http
+  domain: Insee
+  description: Catalogue MELODI des jeux de données statistiques, modalités et observations
+  tags:
+  - insee
+  - melodi
+  - datasets
+  - modalities
+  - observations
+  enabled: true
+- name: rmes
+  url: http://rmes-mcp:8003/mcp
+  transport: http
+  domain: Insee
+  description: Métadonnées statistiques INSEE, définitions, nomenclatures et classifications
+    via SPARQL
+  tags:
+  - insee
+  - rmes
+  - metadata
+  - definitions
+  - nomenclatures
+  - classifications
+  - sparql
+  enabled: true

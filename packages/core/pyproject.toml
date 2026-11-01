@@ -3,14 +3,20 @@ name = "diffusion-mcp-core"
 version = "0.1.0"
 description = "Shared MCP application layer for the INSEE diffusion servers: app factory, server settings, error contract, logging, rate-limit key"
 requires-python = ">=3.12"
+# Direct imports: FastMCP and uvicorn in `src/diffusion_core/app.py`, pydantic and
+# pydantic-settings in `src/diffusion_core/settings.py`. FastMCP 4.0.0 requires
+# pydantic>=2.12.0; keep that floor explicit for our direct pydantic use as well.
+# The uvicorn exact version is an intentional compatibility pin for `McpApplication.run()`.
 dependencies = [
     "fastmcp>=4.0.0",
+    "pydantic>=2.12.0",
     "uvicorn==0.52.4",
     "pydantic-settings>=2.0.0",
 ]
 
-# A brick that searches Elasticsearch installs the driver through this extra; a brick
-# that does not, never sees it. Nothing else in the core imports `elasticsearch`.
+# `src/diffusion_core/elasticsearch.py` imports the Elasticsearch client. Only the INSEE and
+# MELODI bricks use this extra; RMES intentionally depends on the core without it.
+# The driver version is an exact compatibility pin for the query code in those bricks.
 [project.optional-dependencies]
 elasticsearch = [
     "elasticsearch[async]==9.5.0",

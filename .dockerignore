@@ -4,6 +4,7 @@
 # Virtual environments and caches
 .venv/
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .ruff_cache/
 .pytest_cache/

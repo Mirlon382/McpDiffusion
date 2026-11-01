@@ -1,8 +1,7 @@
-"""Shared fixtures: the real tool layer, in memory, against the stub services.
+"""Shared test fixtures: brick tool functions run in memory against stub services.
 
-Nothing here talks to Elasticsearch, insee.fr or RMES. The lifespan context is built from
-`tests.fakes`, so a `Client` session exercises the same registration and dependency-injection
-path the production server runs, without any I/O.
+These tests do not talk to Elasticsearch, insee.fr or RMES. The server boot tests separately
+exercise the mounted aggregate and its child lifespans.
 """
 
 from collections.abc import AsyncIterator
@@ -11,9 +10,13 @@ from typing import Any
 import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.server.lifespan import lifespan
+from insee_mcp.settings import Settings as InseeSettings
+from insee_mcp.tools import register_tools as register_insee_tools
+from melodi_mcp.settings import Settings as MelodiSettings
+from melodi_mcp.tools import register_tools as register_melodi_tools
+from rmes_mcp.settings import Settings as RmesSettings
+from rmes_mcp.tools import register_tools as register_rmes_tools
 
-from mcpdiffusion.settings import Settings
-from mcpdiffusion.tools import register_tools
 from tests.fakes import (
     FakeInseeDocumentService,
     FakeInseeIndexService,
@@ -25,20 +28,31 @@ from tests.fakes import (
 # A host that cannot resolve: the validator demands one, and these tests never dial it.
 FAKE_ES_HOST = "http://elasticsearch.invalid:9200"
 
-# The full set the server registers with every family enabled.
+# The tools each brick publishes, in the order it registers them (decision 4: no renames).
+BRICK_TOOL_NAMES = {
+    "insee": [
+        "search_insee_documents",
+        "get_insee_homepage",
+        "get_insee_document",
+        "search_insee_conjoncture",
+        "search_insee_chiffrecle",
+    ],
+    "melodi": [
+        "search_melodi_datasets",
+        "search_melodi_modalities",
+        "get_melodi_observations",
+    ],
+    "rmes": [
+        "search_rmes_graphs",
+        "describe_rmes_resource",
+        "run_rmes_sparql",
+    ],
+}
+
 ALL_TOOL_NAMES = [
-    "search_insee_documents",
-    "get_insee_homepage",
-    "get_insee_document",
-    "search_insee_conjoncture",
-    "search_insee_chiffrecle",
-    "search_melodi_datasets",
-    "search_melodi_modalities",
-    "get_melodi_observations",
-    "search_rmes_graphs",
-    "describe_rmes_resource",
-    "run_rmes_sparql",
-    "send_feedback",
+    *BRICK_TOOL_NAMES["insee"],
+    *BRICK_TOOL_NAMES["melodi"],
+    *BRICK_TOOL_NAMES["rmes"],
 ]
 
 # Parameter names that `Depends` must keep out of every published schema.
@@ -51,20 +65,7 @@ INJECTED_PARAMETERS = {
 }
 
 
-def make_settings(**overrides: Any) -> Settings:
-    """Settings that never read a `.env`: deterministic, offline, all families enabled."""
-    arguments: dict[str, Any] = {
-        "_env_file": None,
-        "es_host": FAKE_ES_HOST,
-    }
-    arguments.update(overrides)
-    return Settings(**arguments)
-
-
-def build_test_mcp(
-    lifespan_context: dict[str, Any],
-    settings: Settings | None = None,
-) -> FastMCP:
+def build_test_mcp(lifespan_context: dict[str, Any]) -> FastMCP:
     """A FastMCP server whose lifespan yields the stub services the `Depends` accessors read."""
 
     @lifespan
@@ -76,9 +77,17 @@ def build_test_mcp(
         mask_error_details=True,
         lifespan=stub_lifespan,
     )
-    register_tools(
-        mcp=mcp,
-        settings=settings if settings is not None else make_settings(),
+    register_insee_tools(
+        mcp,
+        InseeSettings(_env_file=None, es_host=FAKE_ES_HOST),
+    )
+    register_melodi_tools(
+        mcp,
+        MelodiSettings(_env_file=None, es_host=FAKE_ES_HOST),
+    )
+    register_rmes_tools(
+        mcp,
+        RmesSettings(_env_file=None),
     )
     return mcp
 

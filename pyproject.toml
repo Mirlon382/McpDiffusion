@@ -1,28 +1,34 @@
 [project]
 name = "mcpdiffusion"
 version = "0.1.0"
-description = "MCP server for INSEE data diffusion"
+description = "Aggregate MCP server: the three INSEE bricks assembled into one process"
 requires-python = ">=3.12"
+# Direct imports: `diffusion-mcp-core` and FastMCP in `src/mcpdiffusion/server.py` and
+# `src/mcpdiffusion/assembly.py`; the three brick packages in `assembly.py`. Source-specific
+# clients and their dependencies belong to the bricks. The Elasticsearch extra belongs to the
+# INSEE and MELODI bricks, not this aggregate. FastMCP's server extra supplies Starlette >=1.0.1;
+# this aggregate imports no Starlette API and needs no direct pin.
 dependencies = [
-    "diffusion-mcp-core[elasticsearch]",
+    "diffusion-mcp-core",
     "fastmcp>=4.0.0",
-    "elasticsearch[async]==9.5.0",
-    "uvicorn==0.52.4",
-    "requests==2.34.2",
-    "beautifulsoup4==4.15.0",
-    "lxml==6.1.2",
-    "starlette==1.6.0",
-    "httpx==0.28.1",
-    "python-dotenv==1.2.3",
-    "pydantic-settings>=2.0.0",
-    "trafilatura==2.2.0",
+    "insee-mcp",
+    "melodi-mcp",
+    "rmes-mcp",
 ]
 
 [tool.uv.workspace]
-members = ["packages/core"]
+members = [
+    "packages/core",
+    "packages/insee",
+    "packages/melodi",
+    "packages/rmes",
+]
 
 [tool.uv.sources]
 diffusion-mcp-core = { workspace = true }
+insee-mcp = { workspace = true }
+melodi-mcp = { workspace = true }
+rmes-mcp = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
@@ -32,6 +38,8 @@ build-backend = "hatchling.build"
 packages = ["src/mcpdiffusion"]
 
 [dependency-groups]
+# pytest is imported by the test suite; pytest-asyncio supplies its asyncio auto mode.
+# pre-commit and Ruff are developer CLI tools, not runtime imports.
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -68,7 +76,7 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.per-file-ignores]
 # Long literal statistics, pending replacement by a live source.
-"src/mcpdiffusion/data/insee/indicators.py" = ["E501"]
+"packages/insee/src/insee_mcp/data/indicators.py" = ["E501"]
 
 [tool.ruff.format]
 docstring-code-format = true

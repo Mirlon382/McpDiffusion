@@ -1,9 +1,8 @@
-"""The MCP boundary: registration, published schemas, injection, and the error contract.
+"""The MCP boundary: mounted inventory, published schemas, injection, and the error contract.
 
-These tests drive the real tool layer through an in-memory `Client` and stub services, so a tool
-rename, a dependency leaking into the schema, a lost description, or an error-message regression
-fails here rather than in front of a connected client. The 12 published names are a live contract
-(see `docs/review-mcp-layer.md`); this module is what enforces it in the suite.
+These tests drive the real tool functions from the three bricks through an in-memory `Client` and
+stub services, so a tool rename, a dependency leaking into the schema, a lost description, or an
+error-message regression fails here rather than in front of a connected client.
 """
 
 import inspect
@@ -11,27 +10,24 @@ from typing import Any
 
 from diffusion_core.errors import AppToolError, ErrorCode
 from fastmcp import FastMCP
+from insee_mcp.tools.get_document_tool import get_insee_document
+from insee_mcp.tools.get_homepage_tool import get_insee_homepage
+from insee_mcp.tools.search_chiffrecle_tool import search_insee_chiffrecle
+from insee_mcp.tools.search_conjoncture_tool import search_insee_conjoncture
+from insee_mcp.tools.search_documents_tool import search_insee_documents
+from melodi_mcp.tools.get_observations_tool import get_melodi_observations
+from melodi_mcp.tools.search_datasets_tool import search_melodi_datasets
+from melodi_mcp.tools.search_modalities_tool import search_melodi_modalities
+from rmes_mcp.models import GraphRow
+from rmes_mcp.tools.describe_resource_tool import describe_rmes_resource
+from rmes_mcp.tools.run_sparql_tool import run_rmes_sparql
+from rmes_mcp.tools.search_graphs_tool import search_rmes_graphs
 
-from mcpdiffusion.models.rmes import GraphRow
-from mcpdiffusion.tools import register_tools
-from mcpdiffusion.tools.insee.get_document_tool import get_insee_document
-from mcpdiffusion.tools.insee.get_homepage_tool import get_insee_homepage
-from mcpdiffusion.tools.insee.search_chiffrecle_tool import search_insee_chiffrecle
-from mcpdiffusion.tools.insee.search_conjoncture_tool import search_insee_conjoncture
-from mcpdiffusion.tools.insee.search_documents_tool import search_insee_documents
-from mcpdiffusion.tools.melodi.get_observations_tool import get_melodi_observations
-from mcpdiffusion.tools.melodi.search_datasets_tool import search_melodi_datasets
-from mcpdiffusion.tools.melodi.search_modalities_tool import search_melodi_modalities
-from mcpdiffusion.tools.rmes.describe_resource_tool import describe_rmes_resource
-from mcpdiffusion.tools.rmes.run_sparql_tool import run_rmes_sparql
-from mcpdiffusion.tools.rmes.search_graphs_tool import search_rmes_graphs
-from mcpdiffusion.tools.send_feedback_tool import send_feedback
 from tests.conftest import (
     ALL_TOOL_NAMES,
     INJECTED_PARAMETERS,
     build_test_mcp,
     call_tool,
-    make_settings,
     result_text,
     tool_map,
 )
@@ -50,7 +46,6 @@ TOOL_FUNCTIONS: dict[str, Any] = {
     "search_rmes_graphs": search_rmes_graphs,
     "describe_rmes_resource": describe_rmes_resource,
     "run_rmes_sparql": run_rmes_sparql,
-    "send_feedback": send_feedback,
 }
 
 
@@ -60,7 +55,7 @@ class TestRegistration:
     async def test_the_server_publishes_exactly_the_expected_tools(self, mcp: FastMCP) -> None:
         published = set(await tool_map(mcp))
         assert published == set(ALL_TOOL_NAMES)
-        assert len(ALL_TOOL_NAMES) == len(TOOL_FUNCTIONS) == 12
+        assert len(ALL_TOOL_NAMES) == len(TOOL_FUNCTIONS) == 11
 
 
 class TestPublishedSchemas:
@@ -123,19 +118,6 @@ class TestDependencyInjection:
         assert forwarded["query"] == "indice des prix a la consommation"
         assert forwarded["number_of_datasets"] == 3
 
-    async def test_the_feedback_tool_needs_no_service(self, mcp: FastMCP) -> None:
-        result = await call_tool(
-            mcp,
-            "send_feedback",
-            {
-                "author": "suite",
-                "feedback": "Schema check from the MCP-layer tests.",
-            },
-        )
-
-        assert not result.is_error
-        assert result.structured_content["message"] == "Feedback recorded successfully."
-
 
 class TestErrorContract:
     """The two error paths across the MCP boundary: ours reaches the caller, bugs are masked."""
@@ -180,22 +162,3 @@ class TestErrorContract:
 
         assert result.is_error
         assert "es-secret" not in result_text(result)
-
-
-class TestFlagGating:
-    """A disabled family is unregistered, not hidden: its tools are absent from `tools/list`."""
-
-    async def test_only_enabled_families_are_published(self) -> None:
-        mcp = FastMCP("gated")
-        register_tools(
-            mcp=mcp,
-            settings=make_settings(
-                enable_insee_tools=False,
-                enable_melodi_tools=False,
-                enable_rmes_tools=False,
-            ),
-        )
-
-        published = set(await tool_map(mcp))
-
-        assert published == {"send_feedback"}
